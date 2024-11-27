@@ -6,7 +6,7 @@ audio:
   n_fft: 2048
   num_channels: 2
   sample_rate: 44100
-  min_mean_abs: 0.000
+  min_mean_abs: 0.001
 
 model:
   dim: 384
@@ -15,11 +15,12 @@ model:
   num_stems: 1
   time_transformer_depth: 1
   freq_transformer_depth: 1
+  linear_transformer_depth: 0
   num_bands: 60
   dim_head: 64
   heads: 8
-  attn_dropout: 0
-  ff_dropout: 0
+  attn_dropout: 0.1
+  ff_dropout: 0.1
   flash_attn: True
   dim_freqs_in: 1025
   sample_rate: 44100  # needed for mel filter bank from librosa
@@ -37,6 +38,10 @@ model:
   - 256
   multi_stft_hop_size: 147
   multi_stft_normalized: False
+  mlp_expansion_factor: 4 # Probably too big (requires a lot of memory for weights)
+  use_torch_checkpoint: False  # it allows to greatly reduce GPU memory consumption during training (not fully tested)
+  skip_connection: False # Enable skip connection between transformer blocks - can solve problem with gradients and probably faster training
+
 
 training:
   batch_size: 4
@@ -47,14 +52,14 @@ training:
     - bass
     - drums
     - other
-  lr: 1.0e-05
+  lr: 5.0e-05
   patience: 2
   reduce_factor: 0.95
   target_instrument: vocals
   num_epochs: 1000
   num_steps: 1000
   q: 0.95
-  coarse_loss_clip: false
+  coarse_loss_clip: true
   ema_momentum: 0.999
   optimizer: adam
   other_fix: true # it's needed for checking on multisong dataset if other is actually instrumental
