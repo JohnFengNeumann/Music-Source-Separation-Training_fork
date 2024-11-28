@@ -445,7 +445,7 @@ class MelBandRoformer(Module):
         # band split and mask estimator
 
         freqs_per_bands_with_complex = tuple(2 * f * self.audio_channels for f in num_freqs_per_band.tolist())
-
+        # self.freq_per_bands_with_complex = freqs_per_bands_with_complex
         self.band_split = BandSplit(
             dim=dim,
             dim_inputs=freqs_per_bands_with_complex
