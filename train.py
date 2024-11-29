@@ -279,7 +279,7 @@ def train_model(args):
                         y = (y - mean) / std
 
             with torch.cuda.amp.autocast(enabled=use_amp):
-                if args.model_type in ['mel_band_roformer', 'bs_roformer']:
+                if args.model_type in ['mel_band_roformer', 'bs_roformer', 'mel_band_llama']:
                     # loss is computed in forward pass
                     loss = model(x, y)
                     if type(device_ids) != int:

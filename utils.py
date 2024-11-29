@@ -39,6 +39,11 @@ def get_model_from_config(model_type, config_path):
         model = MelBandRoformer(
             **dict(config.model)
         )
+    elif model_type == 'mel_band_llama':
+        from models.bs_roformer import MelBandLlama
+        model = MelBandLlama(
+            **dict(config.model)
+        )
     elif model_type == 'bs_roformer':
         from models.bs_roformer import BSRoformer
         model = BSRoformer(
