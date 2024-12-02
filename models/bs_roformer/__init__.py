@@ -1,3 +1,4 @@
 from models.bs_roformer.bs_roformer import BSRoformer
 from models.bs_roformer.mel_band_roformer import MelBandRoformer
 from models.bs_roformer.mel_band_llama import MelBandLlama
+from models.bs_roformer.mel_band_roformer_snake import MelBandRoformerSnake

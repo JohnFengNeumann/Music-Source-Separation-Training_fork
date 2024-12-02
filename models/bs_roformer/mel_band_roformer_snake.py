@@ -4,6 +4,8 @@ import torch
 from torch import nn, einsum, Tensor
 from torch.nn import Module, ModuleList
 import torch.nn.functional as F
+from torch import pow, sin
+from torch.nn import Parameter
 
 from models.bs_roformer.attend import Attend
 from torch.utils.checkpoint import checkpoint
@@ -18,7 +20,8 @@ from einops.layers.torch import Rearrange
 
 from librosa import filters
 
-
+from modules.activation_functions import *
+from modules.anti_aliasing import *
 # helper functions
 
 def exists(val):
@@ -46,7 +49,6 @@ def pad_at_dim(t, pad, dim=-1, value=0.):
 def l2norm(t):
     return F.normalize(t, dim=-1, p=2)
 
-
 # norm
 
 class RMSNorm(Module):
@@ -65,19 +67,24 @@ class FeedForward(Module):
     def __init__(
             self,
             dim,
+            channels,
             mult=4,
-            dropout=0.
+            dropout=0.,
     ):
         super().__init__()
         dim_inner = int(dim * mult)
+        activation = SnakeBeta(channels, alpha_logscale=False)
+        self.activation = Activation1d(activation=activation)
+
         self.net = nn.Sequential(
             RMSNorm(dim),
             nn.Linear(dim, dim_inner),
-            nn.GELU(),
+            self.activation,
             nn.Dropout(dropout),
             nn.Linear(dim_inner, dim),
             nn.Dropout(dropout)
         )
+        
 
     def forward(self, x):
         return self.net(x)
@@ -190,6 +197,7 @@ class Transformer(Module):
             *,
             dim,
             depth,
+            channels,
             dim_head=64,
             heads=8,
             attn_dropout=0.,
@@ -212,7 +220,7 @@ class Transformer(Module):
 
             self.layers.append(ModuleList([
                 attn,
-                FeedForward(dim=dim, mult=ff_mult, dropout=ff_dropout)
+                FeedForward(dim=dim, channels=channels, mult=ff_mult, dropout=ff_dropout)
             ]))
 
         self.norm = RMSNorm(dim) if norm_output else nn.Identity()
@@ -296,9 +304,10 @@ class MaskEstimator(Module):
         self.dim_inputs = dim_inputs
         self.to_freqs = ModuleList([])
         dim_hidden = dim * mlp_expansion_factor
-
+        
         for dim_in in dim_inputs:
             net = []
+
             mlp = nn.Sequential(
                 MLP(dim, dim_in * 2, dim_hidden=dim_hidden, depth=depth),
                 nn.GLU(dim=-1)
@@ -308,18 +317,20 @@ class MaskEstimator(Module):
 
     def forward(self, x):
         x = x.unbind(dim=-2)
+
         outs = []
 
         for band_features, mlp in zip(x, self.to_freqs):
-            print(band_features.shape, mlp)
+            
             freq_out = mlp(band_features)
             outs.append(freq_out)
+
         return torch.cat(outs, dim=-1)
 
 
 # main class
 
-class MelBandRoformer(Module):
+class MelBandRoformerSnake(Module):
 
     @beartype
     def __init__(
@@ -379,15 +390,17 @@ class MelBandRoformer(Module):
         time_rotary_embed = RotaryEmbedding(dim=dim_head)
         freq_rotary_embed = RotaryEmbedding(dim=dim_head)
 
+        freq = 60
+        time = 801
         for _ in range(depth):
             tran_modules = []
             if linear_transformer_depth > 0:
                 tran_modules.append(Transformer(depth=linear_transformer_depth, linear_attn=True, **transformer_kwargs))
             tran_modules.append(
-                Transformer(depth=time_transformer_depth, rotary_embed=time_rotary_embed, **transformer_kwargs)
+                Transformer(channels=time, depth=time_transformer_depth, rotary_embed=time_rotary_embed, **transformer_kwargs)
             )
             tran_modules.append(
-                Transformer(depth=freq_transformer_depth, rotary_embed=freq_rotary_embed, **transformer_kwargs)
+                Transformer(channels=freq, depth=freq_transformer_depth, rotary_embed=freq_rotary_embed, **transformer_kwargs)
             )
             self.layers.append(nn.ModuleList(tran_modules))
 
@@ -524,7 +537,7 @@ class MelBandRoformer(Module):
 
         # account for stereo
 
-        x = stft_repr[batch_arange, self.freq_indices]
+        x = stft_repr[batch_arange, self.freq_indices] # f here change to N：subband number
 
         # fold the complex (real and imag) into the frequencies dimension
 
