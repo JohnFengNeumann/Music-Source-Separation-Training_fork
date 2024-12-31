@@ -132,7 +132,7 @@ def train_model(args):
     # torch.backends.cudnn.benchmark = True
     torch.backends.cudnn.deterministic = False # Fix possible slow down with dilation convolutions
     torch.multiprocessing.set_start_method('spawn')
-
+    
     model, config = get_model_from_config(args.model_type, args.config_path)
     print("Instruments: {}".format(config.training.instruments))
 

@@ -1,15 +1,15 @@
 audio:
-  chunk_size: 131584
+  chunk_size: 352800
   dim_f: 1024
   dim_t: 256
-  hop_length: 512
+  hop_length: 441
   n_fft: 2048
   num_channels: 2
   sample_rate: 44100
   min_mean_abs: 0.001
 
 model:
-  dim: 192
+  dim: 384
   depth: 6
   stereo: true
   num_stems: 1
@@ -86,7 +86,7 @@ model:
   flash_attn: true
   dim_freqs_in: 1025
   stft_n_fft: 2048
-  stft_hop_length: 512
+  stft_hop_length: 441
   stft_win_length: 2048
   stft_normalized: false
   mask_estimator_depth: 2
@@ -104,7 +104,7 @@ model:
   skip_connection: False # Enable skip connection between transformer blocks - can solve problem with gradients and probably faster training
 
 training:
-  batch_size: 20
+  batch_size: 4
   gradient_accumulation_steps: 2
   grad_clip: 0
   instruments:
@@ -130,8 +130,14 @@ augmentations:
   loudness: true # randomly change loudness of each stem on the range (loudness_min; loudness_max)
   loudness_min: 0.5
   loudness_max: 1.5
+  mixup: true # mix several stems of same type with some probability (only works for dataset types: 1, 2, 3)
+  mixup_probs: !!python/tuple # 2 additional stems of the same type (1st with prob 0.2, 2nd with prob 0.02)
+    - 0.2
+    - 0.02
+  mixup_loudness_min: 0.5
+  mixup_loudness_max: 1.5
 
 inference:
   batch_size: 4
   dim_t: 256
-  num_overlap: 4
+  num_overlap: 2

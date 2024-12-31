@@ -131,7 +131,9 @@ def proc_list_of_files(
             if store_dir != "":
                 out_wav_name = "{}/{}_{}.wav".format(store_dir, os.path.basename(folder), instr)
                 sf.write(out_wav_name, estimates, sr, subtype='FLOAT')
-
+            if verbose:
+                print(f"Estimates shape: {estimates.shape}, Track shape: {track.shape}, mix_orig shape: {mix_orig.shape}")
+            
             track_metrics = get_metrics(
                 args.metrics,
                 track.T,

@@ -311,7 +311,6 @@ class MaskEstimator(Module):
         outs = []
 
         for band_features, mlp in zip(x, self.to_freqs):
-            print(band_features.shape, mlp)
             freq_out = mlp(band_features)
             outs.append(freq_out)
         return torch.cat(outs, dim=-1)
